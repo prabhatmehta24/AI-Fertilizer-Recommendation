@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#eaffef">
+  <title>AI Smart Agriculture Assistant</title>
+
+  <style>
+    :root {
+      --green: #168348;
+      --green-dark: #105b34;
+      --green-light: #e9f9ee;
+      --text: #183b27;
+      --muted: #5e7868;
+      --glass: rgba(255, 255, 255, 0.82);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-height: 100%; scroll-behavior: smooth; overflow-x: clip; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(-45deg, #eaffef, #f7fff8, #c9f4d7, #e4fff0);
+      background-size: 400% 400%;
+      animation: backgroundShift 18s ease infinite;
+      overflow-x: clip;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    /* Ambient background */
+    .ambient {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      filter: blur(65px);
+      opacity: .45;
+      background: #72e69a;
+      animation: orbDrift 16s ease-in-out infinite alternate;
+    }
+
+    .orb.one { left: -130px; top: 4%; }
+    .orb.two {
+      right: -150px;
+      bottom: -5%;
+      width: 420px;
+      height: 420px;
+      background: #40bf78;
+      animation-delay: -7s;
+    }
+    .orb.three {
+      left: 42%;
+      top: 40%;
+      width: 240px;
+      height: 240px;
+      background: #b4f5c9;
+      animation-delay: -4s;
+    }
+
+    .particle, .falling-leaf {
+      position: absolute;
+      top: -50px;
+      left: var(--left);
+      animation: fall var(--duration) linear var(--delay) infinite;
+      opacity: .34;
+    }
+
+    .particle {
+      width: var(--size);
+      height: var(--size);
+      border-radius: 50%;
+      background: #2ca75b;
+      box-shadow: 0 0 14px rgba(44, 167, 91, .45);
+    }
+
+    .falling-leaf { font-size: var(--size); }
+
+    /* Split-screen app layout */
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+      gap: clamp(22px, 4vw, 64px);
+      width: min(1440px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: clamp(18px, 3vw, 44px);
+      align-items: start;
+    }
+
+    .hero-panel {
+      position: sticky;
+      top: 28px;
+      min-height: calc(100vh - 56px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: clamp(28px, 4vw, 58px);
+      border: 1px solid rgba(255,255,255,.75);
+      border-radius: 32px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255,255,255,.65), transparent 32%),
+        linear-gradient(145deg, rgba(255,255,255,.72), rgba(205,246,218,.66));
+      box-shadow: 0 24px 70px rgba(20, 92, 50, .12);
+      backdrop-filter: blur(20px);
+      animation: slideInLeft .9s ease both;
+    }
+
+    .hero-panel::before {
+      content: "";
+      position: absolute;
+      width: 360px;
+      height: 360px;
+      right: -110px;
+      bottom: 12%;
+      border: 1px solid rgba(22,131,72,.15);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 28px rgba(22,131,72,.035),
+        0 0 0 58px rgba(22,131,72,.03),
+        0 0 0 92px rgba(22,131,72,.025);
+      animation: ringPulse 7s ease-in-out infinite;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--green-dark);
+    }
+
+    .brand-icon {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 8px 22px rgba(16,91,52,.12);
+      font-size: 23px;
+      animation: iconBob 4s ease-in-out infinite;
+    }
+
+    .hero-copy { position: relative; z-index: 1; margin: 48px 0; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(22,131,72,.15);
+      border-radius: 999px;
+      background: rgba(255,255,255,.6);
+      color: var(--green-dark);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .04em;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #28a85b;
+      box-shadow: 0 0 0 0 rgba(40,168,91,.5);
+      animation: statusPulse 1.8s infinite;
+    }
+
+    .hero-copy h1 {
+      max-width: 650px;
+      margin: 24px 0 18px;
+      font-size: clamp(38px, 4.4vw, 68px);
+      line-height: 1.03;
+      letter-spacing: -.045em;
+      color: #124d2e;
+    }
+
+    .hero-copy h1 span {
+      display: inline-block;
+      color: #218b4d;
+      background: linear-gradient(90deg, #218b4d, #65bf77, #168348);
+      background-size: 200% auto;
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: textShimmer 5s linear infinite;
+    }
+
+    .hero-copy p {
+      max-width: 480px;
+      color: #4d6e59;
+      font-size: clamp(14px, 1.2vw, 17px);
+      line-height: 1.8;
+    }
+
+    .farm-art {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      min-height: 210px;
+      margin: 12px 0 28px;
+    }
+
+    .sun {
+      position: absolute;
+      top: 8px;
+      right: 18%;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fff6b8, #f5d875);
+      box-shadow: 0 0 0 16px rgba(255,232,139,.16), 0 0 55px rgba(244,213,104,.45);
+      animation: sunGlow 5s ease-in-out infinite alternate;
+    }
+
+    .hill {
+      position: absolute;
+      bottom: 12px;
+      width: 100%;
+      height: 125px;
+      border-radius: 50% 50% 0 0 / 45% 45% 0 0;
+      transform: rotate(-5deg);
+    }
+
+    .hill.back {
+      bottom: 30px;
+      background: linear-gradient(135deg, #a9e9b7, #72cf8b);
+      transform: rotate(7deg);
+    }
+
+    .hill.front {
+      background: linear-gradient(135deg, #48b96d, #177a43);
+      clip-path: ellipse(65% 60% at 50% 100%);
+    }
+
+    .crop {
+      position: absolute;
+      bottom: 48px;
+      font-size: clamp(30px, 3vw, 48px);
+      filter: drop-shadow(0 8px 8px rgba(16,91,52,.12));
+      animation: cropSway 4s ease-in-out infinite;
+    }
+
+    .crop.c1 { left: 18%; animation-delay: -.5s; }
+    .crop.c2 { left: 37%; bottom: 72px; animation-delay: -1.5s; }
+    .crop.c3 { right: 35%; bottom: 62px; animation-delay: -2.5s; }
+    .crop.c4 { right: 15%; animation-delay: -1s; }
+
+    .feature-list {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px;
+      border: 1px solid rgba(255,255,255,.8);
+      border-radius: 15px;
+      background: rgba(255,255,255,.55);
+      color: #245638;
+      font-size: 12px;
+      font-weight: 700;
+      transition: transform .25s, background .25s;
+    }
+
+    .feature:hover {
+      transform: translateY(-4px);
+      background: rgba(255,255,255,.9);
+    }
+
+    .feature-icon { font-size: 21px; }
+
+    .hero-footer {
+      position: relative;
+      z-index: 1;
+      margin-top: 28px;
+      color: #67816e;
+      font-size: 11px;
+    }
+
+    /* Right-side compact dashboard */
+    .dashboard {
+      width: 100%;
+      min-width: 0;
+      padding: 4px 0 24px;
+      animation: slideInRight .9s ease both;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 16px;
+      padding: 6px 2px;
+    }
+
+    .dashboard-header h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #124d2e;
+    }
+
+    .dashboard-header p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .live-badge {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.7);
+      color: var(--green-dark);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 15px;
+      padding: 21px;
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 21px;
+      background: var(--glass);
+      box-shadow: 0 12px 34px rgba(16,91,52,.085);
+      backdrop-filter: blur(18px);
+      animation: cardEnter .7s ease both;
+      transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+    }
+
+    .card:nth-of-type(2) { animation-delay: .08s; }
+    .card:nth-of-type(3) { animation-delay: .16s; }
+    .card:nth-of-type(4) { animation-delay: .24s; }
+    .card:nth-of-type(5) { animation-delay: .32s; }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(67,178,105,.5);
+      box-shadow: 0 18px 40px rgba(16,91,52,.14);
+    }
+
+    .card h3 {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 8px;
+      color: #155b34;
+      font-size: 16px;
+    }
+
+    .card-description {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 0;
+      color: #315d40;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid #d2ead9;
+      border-radius: 11px;
+      outline: none;
+      color: var(--text);
+      background: rgba(255,255,255,.9);
+      font-size: 13px;
+      transition: border-color .25s, box-shadow .25s, transform .25s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #48ae6b;
+      box-shadow: 0 0 0 4px rgba(54,166,99,.12);
+    }
+
+    textarea { resize: vertical; }
+
+    .button {
+      position: relative;
+      overflow: hidden;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      width: auto;
+      min-height: 40px;
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 11px;
+      color: white;
+      background: linear-gradient(120deg, #229552, #105b34);
+      box-shadow: 0 5px 14px rgba(31,122,63,.18);
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform .25s, box-shadow .25s;
+    }
+
+    .button::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      left: -130%;
+      width: 65%;
+      transform: skewX(-24deg);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 9px 22px rgba(31,122,63,.28);
+    }
+
+    .button:hover::after { animation: buttonShine .8s ease; }
+
+    .button.primary {
+      width: 100%;
+      margin-top: 15px;
+      min-height: 44px;
+      animation: buttonPulse 3s ease-in-out infinite;
+    }
+
+    .button.secondary {
+      margin-top: 10px;
+      background: linear-gradient(120deg, #287e4b, #155b34);
+    }
+
+    .result {
+      display: none;
+      margin-top: 13px;
+      padding: 14px;
+      border: 1px solid #d3eedb;
+      border-radius: 13px;
+      background: rgba(239,251,243,.95);
+      color: #245638;
+      font-size: 13px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+      animation: resultAppear .35s ease both;
+    }
+
+    .result strong { color: #105b34; }
+
+    .error {
+      border-color: #f3c1c1;
+      background: #fff0f0;
+      color: #8c2525;
+    }
+
+    .history-pill {
+      display: inline-block;
+      margin: 4px;
+      padding: 7px 11px;
+      border: 1px solid #ccebd5;
+      border-radius: 999px;
+      background: #e6f9ec;
+      color: #176b3a;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .feedback-fields { display: grid; gap: 12px; }
+    .full-width { grid-column: 1 / -1; }
+
+    /* Keyframes */
+    @keyframes backgroundShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    @keyframes orbDrift {
+      from { transform: translate3d(0,0,0) scale(.85); }
+      to { transform: translate3d(90px,-60px,0) scale(1.2); }
+    }
+
+    @keyframes fall {
+      0% { transform: translate3d(0,-8vh,0) rotate(0deg); opacity: 0; }
+      12% { opacity: .38; }
+      85% { opacity: .28; }
+      100% { transform: translate3d(var(--drift, 70px),110vh,0) rotate(360deg); opacity: 0; }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes cardEnter {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes buttonShine {
+      from { left: -130%; }
+      to { left: 150%; }
+    }
+
+    @keyframes buttonPulse {
+      0%, 100% { box-shadow: 0 5px 14px rgba(31,122,63,.18); }
+      50% { box-shadow: 0 7px 23px rgba(31,122,63,.32); }
+    }
+
+    @keyframes ringPulse {
+      0%, 100% { transform: scale(.96); opacity: .65; }
+      50% { transform: scale(1.04); opacity: 1; }
+    }
+
+    @keyframes iconBob {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-5px) rotate(-4deg); }
+    }
+
+    @keyframes statusPulse {
+      0% { box-shadow: 0 0 0 0 rgba(40,168,91,.45); }
+      70% { box-shadow: 0 0 0 7px rgba(40,168,91,0); }
+      100% { box-shadow: 0 0 0 0 rgba(40,168,91,0); }
+    }
+
+    @keyframes textShimmer {
+      to { background-position: 200% center; }
+    }
+
+    @keyframes sunGlow {
+      from { transform: scale(.96); box-shadow: 0 0 0 12px rgba(255,232,139,.12), 0 0 40px rgba(244,213,104,.3); }
+      to { transform: scale(1.04); box-shadow: 0 0 0 20px rgba(255,232,139,.18), 0 0 65px rgba(244,213,104,.5); }
+    }
+
+    @keyframes cropSway {
+      0%, 100% { transform: rotate(-5deg) translateY(0); }
+      50% { transform: rotate(5deg) translateY(-6px); }
+    }
+
+    @keyframes resultAppear {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Tablet and mobile */
+    @media (max-width: 1000px) {
+      .app-shell {
+        grid-template-columns: minmax(0, .85fr) minmax(390px, 1fr);
+        gap: 22px;
+        padding: 20px;
+      }
+
+      .hero-panel { padding: 28px; }
+      .hero-copy h1 { font-size: clamp(34px, 4vw, 48px); }
+      .farm-art { min-height: 170px; }
+      .feature-list { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        display: flex;
+        flex-direction: column;
+        padding: 14px;
+        gap: 18px;
+      }
+
+      .hero-panel {
+        position: relative;
+        top: auto;
+        min-height: auto;
+        width: 100%;
+        padding: 25px;
+        border-radius: 24px;
+      }
+
+      .hero-copy { margin: 28px 0 12px; }
+      .hero-copy h1 { font-size: clamp(34px, 9vw, 52px); }
+      .farm-art { min-height: 150px; margin-bottom: 15px; }
+      .feature-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero-footer { margin-top: 20px; }
+
+      .dashboard { width: 100%; }
+      .dashboard-header { margin-bottom: 12px; }
+      .card { padding: 18px; }
+    }
+
+    @media (max-width: 420px) {
+      .app-shell { padding: 10px; }
+      .hero-panel { padding: 20px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .feature-list { grid-template-columns: 1fr 1fr; }
+      .card { border-radius: 17px; }
+      .live-badge { font-size: 10px; }
+    }
+
+
+    /* Taller layout: more breathing room and roughly 2–3 viewport scrolls */
+    @media (min-width: 761px) {
+      .app-shell {
+        align-items: start;
+        gap: clamp(28px, 4vw, 64px);
+        padding-top: 36px;
+        padding-bottom: 70px;
+      }
+
+      .hero-panel {
+        min-height: calc(100vh - 72px);
+        padding: clamp(34px, 4vw, 60px);
+      }
+
+      .hero-copy {
+        margin-top: 70px;
+        margin-bottom: 72px;
+      }
+
+      .farm-art {
+        min-height: 280px;
+        margin-top: 28px;
+        margin-bottom: 42px;
+      }
+
+      .feature-list {
+        gap: 16px;
+      }
+
+      .feature {
+        min-height: 62px;
+        padding: 16px;
+        font-size: 13px;
+      }
+
+      .dashboard {
+        padding-bottom: 90px;
+      }
+
+      .dashboard-header {
+        margin-bottom: 24px;
+        padding: 10px 2px;
+      }
+
+      .dashboard-header h2 {
+        font-size: 25px;
+      }
+
+      .dashboard-header p {
+        font-size: 14px;
+      }
+
+      .card {
+        padding: clamp(25px, 2.5vw, 34px);
+        margin-bottom: 24px;
+        border-radius: 24px;
+      }
+
+      .card h3 {
+        font-size: 19px;
+        margin-bottom: 12px;
+      }
+
+      .card-description {
+        font-size: 14px;
+        margin-bottom: 22px;
+        line-height: 1.8;
+      }
+
+      .form-grid {
+        row-gap: 22px;
+        column-gap: 18px;
+      }
+
+      label {
+        gap: 10px;
+        font-size: 14px;
+      }
+
+      input, select, textarea {
+        padding: 15px 14px;
+        min-height: 49px;
+        border-radius: 13px;
+        font-size: 14px;
+      }
+
+      textarea {
+        min-height: 112px;
+      }
+
+      .button {
+        min-height: 46px;
+        padding: 13px 18px;
+        font-size: 13px;
+      }
+
+      .button.primary {
+        min-height: 52px;
+        margin-top: 20px;
+      }
+
+      .button.secondary {
+        margin-top: 14px;
+      }
+
+      .result {
+        padding: 18px;
+        margin-top: 17px;
+        font-size: 14px;
+        line-height: 1.8;
+      }
+
+      .feedback-fields {
+        gap: 18px;
+      }
+    }
+
+    @media (min-width: 761px) and (max-width: 1000px) {
+      .app-shell {
+        grid-template-columns: minmax(0, .8fr) minmax(370px, 1fr);
+        gap: 20px;
+        padding: 18px;
+      }
+      .hero-panel { padding: 24px; }
+      .hero-copy { margin-top: 48px; margin-bottom: 48px; }
+    }
+
+    @media (max-width: 760px) {
+      .dashboard { padding-bottom: 40px; }
+      .card { margin-bottom: 18px; }
+    }
+
+
+    /* Final layout tuning: keep both halves fully visible without horizontal clipping */
+    .app-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.04fr);
+      gap: clamp(20px, 3vw, 42px);
+      width: 100%;
+      max-width: 1600px;
+      min-width: 0;
+      margin: 0 auto;
+      padding: clamp(16px, 2.2vw, 34px);
+      align-items: start;
+      overflow: clip;
+    }
+
+    .hero-panel,
+    .dashboard,
+    .card,
+    .form-grid,
+    .feature-list {
+      min-width: 0;
+    }
+
+    .hero-panel {
+      position: sticky;
+      top: 20px;
+      width: 100%;
+      max-width: 100%;
+      min-height: calc(100vh - 40px);
+      padding: clamp(24px, 3vw, 46px);
+      overflow: hidden;
+    }
+
+    .hero-copy h1 {
+      overflow-wrap: anywhere;
+      font-size: clamp(34px, 3.8vw, 62px);
+    }
+
+    .dashboard {
+      width: 100%;
+      max-width: 100%;
+      padding: 4px 0 90px;
+    }
+
+    .dashboard-header {
+      flex-wrap: wrap;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .form-grid > label {
+      min-width: 0;
+    }
+
+    @media (min-width: 761px) {
+      .app-shell {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.04fr);
+      }
+    }
+
+    @media (max-width: 900px) and (min-width: 761px) {
+      .app-shell {
+        gap: 16px;
+        padding: 14px;
+        grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+      }
+      .hero-panel { padding: 22px; }
+      .hero-copy h1 { font-size: clamp(30px, 3.5vw, 42px); }
+      .form-grid { grid-template-columns: minmax(0, 1fr); }
+      .feature-list { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        padding: 12px;
+        gap: 16px;
+        overflow: visible;
+      }
+      .hero-panel {
+        position: relative;
+        top: auto;
+        width: 100%;
+        min-height: auto;
+      }
+      .dashboard {
+        width: 100%;
+        padding-bottom: 32px;
+      }
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 460px) {
+      .form-grid { grid-template-columns: minmax(0, 1fr); }
+      .feature-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dashboard-header { align-items: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="ambient" id="ambient" aria-hidden="true">
+    <span class="orb one"></span>
+    <span class="orb two"></span>
+    <span class="orb three"></span>
+  </div>
+
+  <main class="app-shell">
+    <!-- LEFT HALF: animated introduction -->
+    <aside class="hero-panel">
+      <div class="brand">
+        <span class="brand-icon">🌾</span>
+        <span>AgriTech AI</span>
+      </div>
+
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="status-dot"></span> SMART FARMING, MADE SIMPLE</span>
+        <h1>Grow smarter.<br><span>Harvest better.</span></h1>
+        <p>
+          Use AI-powered fertilizer recommendations to make informed
+          decisions for healthier crops and smarter agriculture.
+        </p>
+      </div>
+
+      <div class="farm-art" aria-hidden="true">
+        <div class="sun"></div>
+        <div class="hill back"></div>
+        <div class="hill front"></div>
+        <span class="crop c1">🌱</span>
+        <span class="crop c2">🌾</span>
+        <span class="crop c3">🌿</span>
+        <span class="crop c4">🌱</span>
+      </div>
+
+      <div class="feature-list">
+        <div class="feature"><span class="feature-icon">🧠</span> AI recommendations</div>
+        <div class="feature"><span class="feature-icon">🌱</span> Crop-aware insights</div>
+        <div class="feature"><span class="feature-icon">📊</span> Prediction history</div>
+        <div class="feature"><span class="feature-icon">♻️</span> Smarter farming</div>
+      </div>
+
+      <div class="hero-footer">AI Smart Agriculture Assistant · Grow with confidence</div>
+    </aside>
+
+    <!-- RIGHT HALF: working dashboard -->
+    <section class="dashboard">
+      <header class="dashboard-header">
+        <div>
+          <h2>Farm Dashboard</h2>
+          <p>Your smart agriculture workspace · More room to explore every feature</p>
+        </div>
+        <span class="live-badge"><span class="status-dot"></span> AI Assistant</span>
+      </header>
+
+      <section class="card">
+        <h3><span>🌿</span> Predict Fertilizer</h3>
+        <p class="card-description">Enter soil and environmental values to get a fertilizer recommendation.</p>
+
+        <form id="predict-form">
+          <div class="form-grid">
+            <label>Temperature (°C)
+              <input id="Temparature" type="number" min="0" max="60" placeholder="26–38" required>
+            </label>
+            <label>Humidity (%)
+              <input id="Humidity" type="number" min="0" max="100" placeholder="50–70" required>
+            </label>
+            <label>Moisture (%)
+              <input id="Moisture" type="number" min="0" max="100" placeholder="27–65" required>
+            </label>
+            <label>Nitrogen
+              <input id="Nitrogen" type="number" min="0" max="100" placeholder="0–42" required>
+            </label>
+            <label>Potassium
+              <input id="Potassium" type="number" min="0" max="100" placeholder="0–19" required>
+            </label>
+            <label>Phosphorous
+              <input id="Phosphorous" type="number" min="0" max="100" placeholder="2–40" required>
+            </label>
+            <label>Soil Type
+              <select id="Soil_Type" required>
+                <option value="">Select soil type</option>
+                <option value="Clayey">Clayey</option>
+                <option value="Sandy">Sandy</option>
+                <option value="Red">Red</option>
+                <option value="Loamy">Loamy</option>
+                <option value="Black">Black</option>
+              </select>
+            </label>
+            <label>Crop Type
+              <select id="Crop_Type" required>
+                <option value="">Select crop type</option>
+                <option value="Sugarcane">Sugarcane</option>
+                <option value="Millets">Millets</option>
+                <option value="Barley">Barley</option>
+                <option value="Paddy">Paddy</option>
+                <option value="Pulses">Pulses</option>
+                <option value="Tobacco">Tobacco</option>
+                <option value="Ground Nuts">Ground Nuts</option>
+                <option value="Maize">Maize</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="form-error" class="result error" role="alert"></div>
+          <button class="button primary" type="submit">✨ Get Recommendation</button>
+        </form>
+
+        <div id="result" class="result" aria-live="polite"></div>
+        <div id="last-prediction" class="result"></div>
+        <button id="reset-button" class="button secondary" type="button">Reset Form</button>
+      </section>
+
+      <section class="card">
+        <h3><span>💬</span> Ask the Assistant</h3>
+        <p class="card-description">Ask a question about fertilizers or your recommendation.</p>
+        <label for="question">Your question</label>
+        <textarea id="question" rows="3" placeholder="Why was this fertilizer recommended?"></textarea>
+        <button id="chat-button" class="button secondary" type="button">Ask Assistant ↗</button>
+        <div id="chat-response" class="result" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <h3><span>📋</span> Prediction History</h3>
+        <p class="card-description">Review your recent fertilizer predictions.</p>
+        <button id="history-button" class="button secondary" type="button">Load History</button>
+        <div id="history" class="result" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <h3><span>⭐</span> Feedback</h3>
+        <p class="card-description">Rate your experience and help improve the assistant.</p>
+
+        <div class="feedback-fields">
+          <label for="feedback-rating">Rating
+            <select id="feedback-rating" required>
+              <option value="">Select rating</option>
+              <option value="5">5 — Excellent</option>
+              <option value="4">4 — Good</option>
+              <option value="3">3 — Okay</option>
+              <option value="2">2 — Poor</option>
+              <option value="1">1 — Bad</option>
+            </select>
+          </label>
+          <label for="feedback-message">Message
+            <textarea id="feedback-message" rows="3" placeholder="How helpful was the recommendation?"></textarea>
+          </label>
+        </div>
+
+        <button id="feedback-button" class="button secondary" type="button">Send Feedback ↗</button>
+        <div id="feedback-response" class="result" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    // Generate subtle background particles and floating leaves.
+    const ambient = document.getElementById("ambient");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!reduceMotion) {
+      for (let i = 0; i < 26; i++) {
+        const particle = document.createElement("span");
+        particle.className = "particle";
+        particle.style.setProperty("--left", Math.random() * 100 + "%");
+        particle.style.setProperty("--size", (3 + Math.random() * 7) + "px");
+        particle.style.setProperty("--duration", (14 + Math.random() * 20) + "s");
+        particle.style.setProperty("--delay", (-Math.random() * 28) + "s");
+        particle.style.setProperty("--drift", (-90 + Math.random() * 180) + "px");
+        ambient.appendChild(particle);
+      }
+
+      const leaves = ["🍃", "🌿", "🌱", "✦"];
+      for (let i = 0; i < 10; i++) {
+        const leaf = document.createElement("span");
+        leaf.className = "falling-leaf";
+        leaf.textContent = leaves[i % leaves.length];
+        leaf.style.setProperty("--left", Math.random() * 100 + "%");
+        leaf.style.setProperty("--size", (15 + Math.random() * 16) + "px");
+        leaf.style.setProperty("--duration", (18 + Math.random() * 22) + "s");
+        leaf.style.setProperty("--delay", (-Math.random() * 30) + "s");
+        leaf.style.setProperty("--drift", (-100 + Math.random() * 200) + "px");
+        ambient.appendChild(leaf);
+      }
+    }
+
+    // Keep the existing local FastAPI backend address.
+    const apiBase = "http://127.0.0.1:8000";
+
+    const formError = document.getElementById("form-error");
+    const feedbackResponse = document.getElementById("feedback-response");
+
+    function showMessage(id, message, isError = false) {
+      const element = document.getElementById(id);
+      element.textContent = message;
+      element.classList.toggle("error", isError);
+      element.style.display = "block";
+    }
+
+    function showError(message) {
+      showMessage("form-error", message, true);
+    }
+
+    function clearError() {
+      formError.textContent = "";
+      formError.style.display = "none";
+    }
+
+    async function apiRequest(path, options = {}) {
+      let response;
+      try {
+        response = await fetch(`${apiBase}${path}`, options);
+      } catch {
+        throw new Error("Cannot connect to the API. Make sure your FastAPI server is running.");
+      }
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        // Some API errors may not contain JSON.
+      }
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || `Request failed (${response.status}).`);
+      }
+
+      return data;
+    }
+
+    // Load available soil and crop choices from the backend when supported.
+    async function loadOptions() {
+      try {
+        const data = await apiRequest("/options");
+        const soilSelect = document.getElementById("Soil_Type");
+        const cropSelect = document.getElementById("Crop_Type");
+
+        if (Array.isArray(data.soil_types) && data.soil_types.length) {
+          soilSelect.replaceChildren(new Option("Select soil type", ""));
+          data.soil_types.forEach(value => soilSelect.add(new Option(value, value)));
+        }
+
+        if (Array.isArray(data.crop_types) && data.crop_types.length) {
+          cropSelect.replaceChildren(new Option("Select crop type", ""));
+          data.crop_types.forEach(value => cropSelect.add(new Option(value, value)));
+        }
+      } catch (error) {
+        console.info("Using default dropdown options:", error.message);
+      }
+    }
+
+    function validatePayload(payload) {
+      if (!payload.Soil_Type || !payload.Crop_Type) {
+        return "Please select a soil type and crop type.";
+      }
+
+      const limits = [
+        ["Temparature", 0, 60, "Temperature"],
+        ["Humidity", 0, 100, "Humidity"],
+        ["Moisture", 0, 100, "Moisture"],
+        ["Nitrogen", 0, 100, "Nitrogen"],
+        ["Potassium", 0, 100, "Potassium"],
+        ["Phosphorous", 0, 100, "Phosphorous"]
+      ];
+
+      for (const [key, min, max, label] of limits) {
+        if (!Number.isFinite(payload[key]) || payload[key] < min || payload[key] > max) {
+          return `${label} must be between ${min} and ${max}.`;
+        }
+      }
+      return null;
+    }
+
+    document.getElementById("predict-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      clearError();
+
+      const numericFields = [
+        "Temparature", "Humidity", "Moisture",
+        "Nitrogen", "Potassium", "Phosphorous"
+      ];
+
+      const payload = {};
+      numericFields.forEach(key => {
+        payload[key] = Number(document.getElementById(key).value);
+      });
+      payload.Soil_Type = document.getElementById("Soil_Type").value;
+      payload.Crop_Type = document.getElementById("Crop_Type").value;
+
+      const validationError = validatePayload(payload);
+      if (validationError) {
+        showError(validationError);
+        return;
+      }
+
+      const submitButton = event.submitter;
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "⏳ Getting recommendation...";
+      }
+
+      try {
+        const data = await apiRequest("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = document.getElementById("result");
+        result.replaceChildren();
+
+        const heading = document.createElement("strong");
+        heading.textContent = `Recommended fertilizer: ${data.recommended_fertilizer ?? "Unavailable"}`;
+
+        const confidence = document.createElement("p");
+        confidence.textContent = `Confidence: ${data.confidence ?? "Not provided"}`;
+
+        const explanation = document.createElement("p");
+        explanation.textContent = data.explanation ?? "";
+
+        result.append(heading, confidence, explanation);
+        result.style.display = "block";
+
+        showMessage(
+          "last-prediction",
+          `Last prediction: ${data.recommended_fertilizer} for ${payload.Crop_Type} on ${payload.Soil_Type} soil.`
+        );
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "✨ Get Recommendation";
+        }
+      }
+    });
+
+    document.getElementById("chat-button").addEventListener("click", async () => {
+      const question = document.getElementById("question").value.trim();
+      if (!question) {
+        showMessage("chat-response", "Please enter a question.", true);
+        return;
+      }
+
+      const button = document.getElementById("chat-button");
+      button.disabled = true;
+      button.textContent = "Thinking...";
+
+      try {
+        const data = await apiRequest("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
+        showMessage("chat-response", data.answer || "No answer received.");
+      } catch (error) {
+        showMessage("chat-response", error.message, true);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Ask Assistant ↗";
+      }
+    });
+
+    document.getElementById("history-button").addEventListener("click", async () => {
+      const button = document.getElementById("history-button");
+      button.disabled = true;
+      button.textContent = "Loading...";
+
+      try {
+        const data = await apiRequest("/history");
+        const history = document.getElementById("history");
+        history.replaceChildren();
+
+        if (Array.isArray(data.history) && data.history.length) {
+          data.history.forEach(item => {
+            const pill = document.createElement("span");
+            pill.className = "history-pill";
+            pill.textContent = item.fertilizer ?? "Unknown fertilizer";
+            history.appendChild(pill);
+          });
+          history.style.display = "block";
+        } else {
+          showMessage("history", "No history yet.");
+        }
+      } catch (error) {
+        showMessage("history", error.message, true);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Load History";
+      }
+    });
+
+    document.getElementById("feedback-button").addEventListener("click", async () => {
+      const rating = Number(document.getElementById("feedback-rating").value);
+      const message = document.getElementById("feedback-message").value.trim();
+
+      if (!rating || !message) {
+        showMessage("feedback-response", "Please provide both a rating and a message.", true);
+        return;
+      }
+
+      const button = document.getElementById("feedback-button");
+      button.disabled = true;
+      button.textContent = "Sending...";
+
+      try {
+        const data = await apiRequest("/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rating, message })
+        });
+
+        showMessage("feedback-response", data.message || "Feedback submitted successfully.");
+        document.getElementById("feedback-rating").value = "";
+        document.getElementById("feedback-message").value = "";
+      } catch (error) {
+        showMessage("feedback-response", error.message, true);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Send Feedback ↗";
+      }
+    });
+
+    document.getElementById("reset-button").addEventListener("click", () => {
+      document.getElementById("predict-form").reset();
+      clearError();
+
+      ["result", "last-prediction"].forEach(id => {
+        const element = document.getElementById(id);
+        element.textContent = "";
+        element.style.display = "none";
+      });
+    });
+
+    loadOptions();
+  </script>
+</body>
+</html>
